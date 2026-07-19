@@ -29,6 +29,7 @@
 #include "../../project/cmd/cmdschematicbuslabeledit.h"
 #include "../../project/cmd/cmdschematicnetlabeledit.h"
 #include "../../project/cmd/cmdschematicnetpointedit.h"
+#include "../../project/cmd/cmdsimplifyschematicsegments.h"
 #include "../../project/cmd/cmdsymbolinstanceedit.h"
 #include "../../project/cmd/cmdsymbolinstancetextsreset.h"
 #include "../schematic/schematicgraphicsscene.h"
@@ -37,10 +38,13 @@
 #include <librepcb/core/project/project.h>
 #include <librepcb/core/project/schematic/items/si_busjunction.h>
 #include <librepcb/core/project/schematic/items/si_buslabel.h>
+#include <librepcb/core/project/schematic/items/si_busline.h>
+#include <librepcb/core/project/schematic/items/si_bussegment.h>
 #include <librepcb/core/project/schematic/items/si_image.h>
 #include <librepcb/core/project/schematic/items/si_netlabel.h>
 #include <librepcb/core/project/schematic/items/si_netline.h>
 #include <librepcb/core/project/schematic/items/si_netpoint.h>
+#include <librepcb/core/project/schematic/items/si_netsegment.h>
 #include <librepcb/core/project/schematic/items/si_polygon.h>
 #include <librepcb/core/project/schematic/items/si_symbol.h>
 #include <librepcb/core/project/schematic/items/si_symbolpin.h>
@@ -86,6 +90,29 @@ CmdDragSelectedSchematicItems::CmdDragSelectedSchematicItems(
   query.addSelectedImages();
   query.addJunctionsOfBusLines();
   query.addNetPointsOfNetLines();
+
+  // Remember all segments whose geometry is affected by the drag. For symbols,
+  // the connected net lines are not part of the selection query, so collect
+  // their segments explicitly through the pins.
+  for (SI_BusLine* line : query.getBusLines()) {
+    mBusSegmentsToSimplify.insert(&line->getBusSegment());
+  }
+  for (SI_BusJunction* junction : query.getBusJunctions()) {
+    mBusSegmentsToSimplify.insert(&junction->getBusSegment());
+  }
+  for (SI_NetLine* line : query.getNetLines()) {
+    mNetSegmentsToSimplify.insert(&line->getNetSegment());
+  }
+  for (SI_NetPoint* point : query.getNetPoints()) {
+    mNetSegmentsToSimplify.insert(&point->getNetSegment());
+  }
+  for (SI_Symbol* symbol : query.getSymbols()) {
+    for (SI_SymbolPin* pin : symbol->getPins()) {
+      for (SI_NetLine* line : pin->getNetLines()) {
+        mNetSegmentsToSimplify.insert(&line->getNetSegment());
+      }
+    }
+  }
 
   // Find the center of all elements and create undo commands.
   foreach (SI_Symbol* symbol, query.getSymbols()) {
@@ -302,8 +329,9 @@ void CmdDragSelectedSchematicItems::mirror(
  ******************************************************************************/
 
 bool CmdDragSelectedSchematicItems::performExecute() {
-  if (mDeltaPos.isOrigin() && (mDeltaAngle == Angle::deg0()) &&
-      (!mSnappedToGrid) && (!mMirrored) && (!mTextsReset)) {
+  const bool geometryChanged = (!mDeltaPos.isOrigin()) ||
+      (mDeltaAngle != Angle::deg0()) || mSnappedToGrid || mMirrored;
+  if ((!geometryChanged) && (!mTextsReset)) {
     // no movement required --> discard all move commands
     qDeleteAll(mSymbolEditCmds);
     mSymbolEditCmds.clear();
@@ -357,6 +385,12 @@ bool CmdDragSelectedSchematicItems::performExecute() {
   }
   foreach (CmdImageEdit* cmd, mImageEditCmds) {
     appendChild(cmd);  // can throw
+  }
+  if (geometryChanged &&
+      ((!mNetSegmentsToSimplify.isEmpty()) ||
+       (!mBusSegmentsToSimplify.isEmpty()))) {
+    appendChild(new CmdSimplifySchematicSegments(
+        mNetSegmentsToSimplify, mBusSegmentsToSimplify));  // can throw
   }
 
   // execute all child commands

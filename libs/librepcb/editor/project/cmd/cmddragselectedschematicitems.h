@@ -35,6 +35,8 @@
  ******************************************************************************/
 namespace librepcb {
 
+class SI_BusSegment;
+class SI_NetSegment;
 class Schematic;
 
 namespace editor {
@@ -90,6 +92,10 @@ private:
   bool mSnappedToGrid;
   bool mMirrored;
   bool mTextsReset;
+
+  // Segments which might need to be simplified after moving their geometry.
+  QSet<SI_NetSegment*> mNetSegmentsToSimplify;
+  QSet<SI_BusSegment*> mBusSegmentsToSimplify;
 
   // Move commands
   QList<CmdSymbolInstanceEdit*> mSymbolEditCmds;
