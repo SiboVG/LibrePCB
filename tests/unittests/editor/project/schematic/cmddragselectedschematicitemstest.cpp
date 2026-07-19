@@ -34,6 +34,7 @@
 #include <librepcb/core/project/schematic/schematic.h>
 #include <librepcb/editor/graphics/graphicslayerlist.h>
 #include <librepcb/editor/project/cmd/cmddragselectedschematicitems.h>
+#include <librepcb/editor/project/cmd/cmdsimplifyschematicsegments.h>
 #include <librepcb/editor/project/projectcrossprobe.h>
 #include <librepcb/editor/project/schematic/graphicsitems/sgi_netline.h>
 #include <librepcb/editor/project/schematic/schematicgraphicsscene.h>
@@ -98,7 +99,11 @@ TEST(CmdDragSelectedSchematicItemsTest, testMergeCollinearNetLines) {
   UndoStack undoStack;
   auto cmd = new CmdDragSelectedSchematicItems(scene);
   cmd->setCurrentPosition(Point(0, -2540000));
+  const QSet<SI_NetSegment*> netSegments = cmd->getModifiedNetSegments();
+  const QSet<SI_BusSegment*> busSegments = cmd->getModifiedBusSegments();
   EXPECT_TRUE(undoStack.execCmd(cmd));
+  EXPECT_TRUE(undoStack.execCmd(
+      new CmdSimplifySchematicSegments(netSegments, busSegments)));
 
   // The moved lines are collinear and therefore merged into a single line.
   SI_NetSegment* result = schematic.getNetSegments().value(segmentUuid);
@@ -111,14 +116,23 @@ TEST(CmdDragSelectedSchematicItemsTest, testMergeCollinearNetLines) {
               ((line->getP1().getPosition() == Point(5080000, 0)) &&
                (line->getP2().getPosition() == Point(0, 0))));
 
-  // Simplification is part of the drag command and follows its undo/redo.
+  // Simplification is a separate undo step, restoring the moved split lines.
   undoStack.undo();
   result = schematic.getNetSegments().value(segmentUuid);
   ASSERT_NE(nullptr, result);
   EXPECT_EQ(3, result->getNetPoints().count());
   EXPECT_EQ(2, result->getNetLines().count());
+  EXPECT_EQ(Point(0, 0), p0->getPosition());
+  EXPECT_EQ(Point(2540000, 0), p1->getPosition());
+
+  // A second undo restores the drag itself.
+  undoStack.undo();
   EXPECT_EQ(Point(0, 2540000), p0->getPosition());
   EXPECT_EQ(Point(2540000, 2540000), p1->getPosition());
+
+  undoStack.redo();
+  EXPECT_EQ(Point(0, 0), p0->getPosition());
+  EXPECT_EQ(Point(2540000, 0), p1->getPosition());
 
   undoStack.redo();
   result = schematic.getNetSegments().value(segmentUuid);

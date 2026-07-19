@@ -72,6 +72,12 @@ public:
   void setCurrentPosition(const Point& pos) noexcept;
   void rotate(const Angle& angle, bool aroundCurrentPosition) noexcept;
   void mirror(Qt::Orientation orientation, bool aroundCurrentPosition) noexcept;
+  const QSet<SI_NetSegment*>& getModifiedNetSegments() const noexcept {
+    return mNetSegmentsToSimplify;
+  }
+  const QSet<SI_BusSegment*>& getModifiedBusSegments() const noexcept {
+    return mBusSegmentsToSimplify;
+  }
 
 private:
   // Private Methods

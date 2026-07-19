@@ -29,7 +29,6 @@
 #include "../../project/cmd/cmdschematicbuslabeledit.h"
 #include "../../project/cmd/cmdschematicnetlabeledit.h"
 #include "../../project/cmd/cmdschematicnetpointedit.h"
-#include "../../project/cmd/cmdsimplifyschematicsegments.h"
 #include "../../project/cmd/cmdsymbolinstanceedit.h"
 #include "../../project/cmd/cmdsymbolinstancetextsreset.h"
 #include "../schematic/schematicgraphicsscene.h"
@@ -329,9 +328,8 @@ void CmdDragSelectedSchematicItems::mirror(
  ******************************************************************************/
 
 bool CmdDragSelectedSchematicItems::performExecute() {
-  const bool geometryChanged = (!mDeltaPos.isOrigin()) ||
-      (mDeltaAngle != Angle::deg0()) || mSnappedToGrid || mMirrored;
-  if ((!geometryChanged) && (!mTextsReset)) {
+  if (mDeltaPos.isOrigin() && (mDeltaAngle == Angle::deg0()) &&
+      (!mSnappedToGrid) && (!mMirrored) && (!mTextsReset)) {
     // no movement required --> discard all move commands
     qDeleteAll(mSymbolEditCmds);
     mSymbolEditCmds.clear();
@@ -386,13 +384,6 @@ bool CmdDragSelectedSchematicItems::performExecute() {
   foreach (CmdImageEdit* cmd, mImageEditCmds) {
     appendChild(cmd);  // can throw
   }
-  if (geometryChanged &&
-      ((!mNetSegmentsToSimplify.isEmpty()) ||
-       (!mBusSegmentsToSimplify.isEmpty()))) {
-    appendChild(new CmdSimplifySchematicSegments(
-        mNetSegmentsToSimplify, mBusSegmentsToSimplify));  // can throw
-  }
-
   // execute all child commands
   return UndoCommandGroup::performExecute();  // can throw
 }
