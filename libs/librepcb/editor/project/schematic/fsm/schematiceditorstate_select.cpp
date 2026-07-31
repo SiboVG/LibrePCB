@@ -526,8 +526,12 @@ bool SchematicEditorState_Select::processGraphicsSceneLeftMouseButtonReleased(
           mSelectedItemsDragCommand->getModifiedBusSegments();
       if (execCmd(mSelectedItemsDragCommand.release()) &&
           ((!netSegments.isEmpty()) || (!busSegments.isEmpty()))) {
-        execCmd(new CmdSimplifySchematicSegments(netSegments,
-                                                 busSegments));  // can throw
+        try {
+          execCmd(new CmdSimplifySchematicSegments(netSegments,
+                                                   busSegments));  // can throw
+        } catch (const Exception& e) {
+          qCritical() << "Failed to simplify schematic segments:" << e.getMsg();
+        }
       }
     } catch (const Exception& e) {
       QMessageBox::critical(parentWidget(), tr("Error"), e.getMsg());

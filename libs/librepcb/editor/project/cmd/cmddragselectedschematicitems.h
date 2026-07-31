@@ -73,10 +73,10 @@ public:
   void rotate(const Angle& angle, bool aroundCurrentPosition) noexcept;
   void mirror(Qt::Orientation orientation, bool aroundCurrentPosition) noexcept;
   const QSet<SI_NetSegment*>& getModifiedNetSegments() const noexcept {
-    return mNetSegmentsToSimplify;
+    return mModifiedNetSegments;
   }
   const QSet<SI_BusSegment*>& getModifiedBusSegments() const noexcept {
-    return mBusSegmentsToSimplify;
+    return mModifiedBusSegments;
   }
 
 private:
@@ -99,9 +99,9 @@ private:
   bool mMirrored;
   bool mTextsReset;
 
-  // Segments which might need to be simplified after moving their geometry.
-  QSet<SI_NetSegment*> mNetSegmentsToSimplify;
-  QSet<SI_BusSegment*> mBusSegmentsToSimplify;
+  // Segments whose geometry might have been modified by the drag.
+  QSet<SI_NetSegment*> mModifiedNetSegments;
+  QSet<SI_BusSegment*> mModifiedBusSegments;
 
   // Move commands
   QList<CmdSymbolInstanceEdit*> mSymbolEditCmds;

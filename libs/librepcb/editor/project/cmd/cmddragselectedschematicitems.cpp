@@ -94,21 +94,21 @@ CmdDragSelectedSchematicItems::CmdDragSelectedSchematicItems(
   // the connected net lines are not part of the selection query, so collect
   // their segments explicitly through the pins.
   for (SI_BusLine* line : query.getBusLines()) {
-    mBusSegmentsToSimplify.insert(&line->getBusSegment());
+    mModifiedBusSegments.insert(&line->getBusSegment());
   }
   for (SI_BusJunction* junction : query.getBusJunctions()) {
-    mBusSegmentsToSimplify.insert(&junction->getBusSegment());
+    mModifiedBusSegments.insert(&junction->getBusSegment());
   }
   for (SI_NetLine* line : query.getNetLines()) {
-    mNetSegmentsToSimplify.insert(&line->getNetSegment());
+    mModifiedNetSegments.insert(&line->getNetSegment());
   }
   for (SI_NetPoint* point : query.getNetPoints()) {
-    mNetSegmentsToSimplify.insert(&point->getNetSegment());
+    mModifiedNetSegments.insert(&point->getNetSegment());
   }
   for (SI_Symbol* symbol : query.getSymbols()) {
     for (SI_SymbolPin* pin : symbol->getPins()) {
-      for (SI_NetLine* line : pin->getNetLines()) {
-        mNetSegmentsToSimplify.insert(&line->getNetSegment());
+      if (SI_NetSegment* segment = pin->getNetSegmentOfLines()) {
+        mModifiedNetSegments.insert(segment);
       }
     }
   }

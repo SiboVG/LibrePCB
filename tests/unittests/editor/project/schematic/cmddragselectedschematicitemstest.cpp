@@ -70,7 +70,7 @@ TEST(CmdDragSelectedSchematicItemsTest, testMergeCollinearNetLines) {
   auto netSignal = new NetSignal(circuit, Uuid::createRandom(),
                                  *circuit.getNetClasses().first(),
                                  CircuitIdentifier("N"), false);
-  netSignal->addToCircuit();
+  circuit.addNetSignal(*netSignal);
 
   const Uuid segmentUuid = Uuid::createRandom();
   auto segment = new SI_NetSegment(schematic, segmentUuid, *netSignal);
